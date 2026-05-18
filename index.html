@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YICCD© | Personal Portfolio - Wu Zeguang</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ================= 基础重置与变量 ================= */
+        :root {
+            --bg-dark: #0b0b0b;
+            --text-dark: #F5F5F5;
+            --bg-light: #F6F6F6;
+            --text-light: #111111;
+            --accent-gray: #888888;
+            --nav-bg: rgba(255, 255, 255, 0.85);
+            --nav-text: #111111;
+            --font-display: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'Space Grotesk', monospace;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body, html {
+            width: 100%; height: 100%; font-family: var(--font-main);
+            overflow: hidden; background-color: var(--bg-dark); color: var(--text-dark);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ================= 预加载动画屏 ================= */
+        #preloader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #EFEFEF; z-index: 9999; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .preloader-brand {
+            font-family: var(--font-display); font-size: 10vw; font-weight: 800;
+            letter-spacing: -0.06em; color: #111111; line-height: 1; user-select: none;
+        }
+        .counter {
+            position: absolute; bottom: 5vw; font-family: var(--font-mono); 
+            font-size: 13px; font-weight: 500; color: #666; letter-spacing: 0.05em;
+        }
+        .black-hole-cover {
+            position: absolute; top: 50%; left: 50%; width: 0px; height: 0px;
+            background: radial-gradient(circle, #0A0A0A 60%, rgba(10,10,10,0.8) 85%, transparent 100%);
+            border-radius: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 2;
+        }
+
+        /* ================= 底部悬浮导航 ================= */
+        .nav-wrapper {
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000;
+        }
+        .nav-pill {
+            display: flex; align-items: center; background: var(--nav-bg);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            padding: 6px; border-radius: 100px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .nav-item {
+            padding: 8px 24px; color: var(--nav-text); cursor: pointer;
+            border-radius: 100px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none; display: flex; flex-direction: column; align-items: center;
+        }
+        .nav-item span.cn { font-size: 13px; font-weight: 600; }
+        .nav-item span.en { font-size: 9px; opacity: 0.4; margin-top: 1px; text-transform: uppercase; font-family: var(--font-mono); }
+        .nav-item.active { background-color: #111111; color: #FFFFFF; }
+        .nav-item.active span.en { opacity: 0.7; }
+        .nav-item:hover:not(.active) { opacity: 0.6; }
+
+        /* ================= 页面视图通用容器 ================= */
+        .view-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow-y: auto; overflow-x: hidden; opacity: 0; pointer-events: none;
+            visibility: hidden; transition: visibility 0s linear 0.8s;
+            scroll-behavior: smooth;
+        }
+        .view-container.active {
+            opacity: 1; pointer-events: auto; visibility: visible; transition: visibility 0s linear 0s;
+        }
+        .view-container::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        /* ================= Home 首页样式 ================= */
+        #home {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        
+        .overlay {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at center, rgba(11,11,11,0.2) 0%, rgba(11,11,11,0.8) 60%, rgba(11,11,11,1) 100%);
+            z-index: 2; pointer-events: none;
+        }
+
+        .floating-gallery {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+            perspective: 1000px; transform-style: preserve-3d; z-index: 1;
+        }
+
+        .card {
+            position: absolute; top: 50%; left: 50%;
+            border-radius: 16px; overflow: hidden;
+            transition: transform 0.3s ease-out;
+            will-change: transform; background: transparent; 
+            opacity: 0; 
+        }
+
+        .card img {
+            width: 100%; height: 100%; object-fit: contain;
+            display: block; opacity: 0.6; transition: opacity 0.3s;
+            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+        }
+        .card:hover img { opacity: 1; }
+
+        .content {
+            position: relative; z-index: 10; text-align: center;
+            transform: translateY(-10px); pointer-events: none;
+        }
+
+        .logo-title {
+            font-size: 8vw; font-weight: 700; letter-spacing: -0.03em;
+            line-height: 1; margin-bottom: 20px; position: relative;
+            display: inline-block; opacity: 0; 
+        }
+        .logo-title sup {
+            font-size: 2vw; font-weight: 400; position: absolute;
+            top: 0.1em; right: -0.8em; color: #888;
+        }
+
+        .subtitle-wrapper {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-size: 1.1rem; color: #888888; font-weight: 500;
+            opacity: 0; 
+        }
+
+        .badge.tagline-pill {
+            color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 16px; border-radius: 100px; font-size: 1rem;
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pill-carousel {
+            display: inline-block;
+            vertical-align: middle;
+            position: relative;
+            height: 1.2em;
+            overflow: hidden;
+            width: auto;
+        }
+        
+        .sliding-text {
+            display: flex;
+            flex-direction: column;
+            color: #fff;
+            font-weight: 500;
+            animation: slideText 4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+        }
+        
+        .sliding-text span {
+            height: 1.2em;
+            display: block;
+            white-space: nowrap;
+        }
+        
+        @keyframes slideText {
+            0%, 40% { transform: translateY(0); }         
+            50%, 90% { transform: translateY(-1.2em); }   
+            100% { transform: translateY(0); }            
+        }
+
+        /* ================= 内页排版公共类 ================= */
+        .section-header { margin-bottom: 5vw; }
+        .section-title-en { font-family: var(--font-mono); font-size: 12px; color: #888; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1vw; }
+        .section-title-cn { font-family: var(--font-display); font-size: 5.5vw; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+        .section-desc { margin-top: 1.5vw; max-width: 580px; }
+        .section-desc .cn { font-size: 15px; color: #555; line-height: 1.6; }
+        .section-desc .en { font-family: var(--font-mono); font-size: 10px; color: #999; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* ================= 作品板块二级导航 ================= */
+        .sub-nav-container {
+            position: sticky;
+            top: 20px;
+            z-index: 900;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+            pointer-events: none; 
+        }
+
+        .sub-nav-bar {
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 5px;
+            border-radius: 100px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            pointer-events: auto; 
+        }
+
+        .sub-nav-item {
+            text-decoration: none;
+            font-size: 11px;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: #888;
+            padding: 8px 16px;
+            border-radius: 100px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sub-nav-item:hover { color: #111; }
+        .sub-nav-item.active { background: #111; color: #fff; }
+
+        /* ================= 栅格系统 ================= */
+        .sub-section-title { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 2vw; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #E0E0E0; padding-bottom: 1vw; margin-top: 6vw; scroll-margin-top: 100px; }
+        .sub-section-title:first-of-type { margin-top: 4vw; }
+        .sub-section-title .en-tag { font-family: var(--font-mono); font-size: 11px; color: #888; font-weight: 400; }
+        
+        .grid-6-col { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1vw; }
+        .grid-5-col { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5vw; }
+        .grid-4-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2vw; }
+        .grid-3-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5vw; }
+        .grid-2-col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3vw; }
+        .grid-1-col { display: grid; grid-template-columns: 1fr; gap: 3vw; }
+        
+        .project-card { position: relative; border-radius: 12px; overflow: hidden; background: #EAEAEA; cursor: pointer; width: 100%; }
+        
+        .card-9-16 { aspect-ratio: 9/16; } 
+        .card-16-9 { aspect-ratio: 16/9; } 
+        .card-3-4 { aspect-ratio: 3/4; }   
+        .card-1-1 { aspect-ratio: 1/1; }
+
+        .card-ratio-2-3 { aspect-ratio: 725/1086; } 
+        .card-ratio-3-4 { aspect-ratio: 6622/8793; } 
+        .card-ratio-tall { aspect-ratio: 4724/10630; } 
+        .card-ratio-p1 { aspect-ratio: 1240 / 3845; }
+        .card-ratio-p2 { aspect-ratio: 1080 / 1091; }
+        .card-ratio-p3 { aspect-ratio: 750 / 1430; }
+        .card-ratio-p4 { aspect-ratio: 640 / 1195; }
+
+        .card-ratio-logo { aspect-ratio: 530 / 536; }
+        .card-ratio-diecut { aspect-ratio: 2619 / 3073; }
+        .card-ratio-yr-p1 { aspect-ratio: 790 / 1616; } /* 更新为 790x1616 */
+        .card-ratio-yr-p2 { aspect-ratio: 928 / 1547; }
+        .card-ratio-cover-vert { aspect-ratio: 1125 / 1500; }
+
+        .project-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .project-card:hover .project-img { transform: scale(1.04); }
+        
+        .project-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 2.5vw; background: linear-gradient(to top, rgba(0,0,0,0.75), transparent); color: #fff; opacity: 0; transform: translateY(10px); transition: all 0.4s ease; pointer-events: none; }
+        .project-card:hover .project-info { opacity: 1; transform: translateY(0); }
+        
+        .card-9-16 .project-info, .card-ratio-2-3 .project-info, .card-ratio-tall .project-info, .card-ratio-cover-vert .project-info { padding: 2vw; }
+        .grid-6-col .project-info, .grid-5-col .project-info, .card-ratio-yr-p1 .project-info, .card-ratio-yr-p2 .project-info { padding: 1.5vw 1vw; }
+        .card-1-1 .project-info, .card-ratio-logo .project-info, .card-ratio-diecut .project-info { padding: 1.5vw; }
+        
+        .project-info .cn { font-size: 18px; font-weight: 600; }
+        .grid-6-col .project-info .cn, .grid-5-col .project-info .cn, .grid-4-col .project-info .cn { font-size: 12px; font-weight: 500; }
+        .card-16-9 .project-info .cn { font-size: 22px; }
+        .grid-3-col .card-16-9 .project-info .cn { font-size: 18px; } 
+        .card-1-1 .project-info .cn, .card-ratio-logo .project-info .cn, .card-ratio-diecut .project-info .cn { font-size: 16px; }
+        
+        .project-info .en { font-family: var(--font-mono); font-size: 10px; color: #DDD; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .grid-6-col .project-info .en, .grid-5-col .project-info .en, .grid-4-col .project-info .en { font-size: 8px; margin-top: 2px; }
+
+        .group-label { font-size: 12px; color: #888; margin-bottom: 1vw; font-family: var(--font-mono); letter-spacing: 0.1em; margin-top: 2vw; }
+
+        /* ================= 页面背景调色与排版 ================= */
+        #work { background-color: var(--bg-light); color: var(--text-light); padding: 10vw 4vw 12vw 4vw; }
+        
+        #archive { background-color: var(--bg-dark); color: var(--text-dark); padding: 10vw 4vw 12vw 4vw; }
+        #archive .sub-section-title { color: #FFF; border-bottom: 1px solid rgba(255,255,255,0.15); }
+        #archive .project-card { background: #222; border: 1px solid rgba(255,255,255,0.05); }
+        #archive .section-desc .cn { color: #AAA; }
+        #archive .section-title-cn { color: #FFF; }
+        #archive .group-label { color: #666; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5vw; }
+
+        #about { background-color: var(--bg-light); color: var(--text-light); padding: 10vw 8vw 12vw 8vw; }
+        .about-layout { display: flex; flex-direction: column; gap: 5vw; max-width: 1200px; margin: 0 auto; }
+        .about-text .cn { font-size: 3vw; font-weight: 500; line-height: 1.35; letter-spacing: -0.02em; }
+        .about-text .cn span { color: var(--accent-gray); }
+        .about-text .en { font-family: var(--font-mono); font-size: 11px; color: #888; margin-top: 1.5vw; text-transform: uppercase; letter-spacing: 0.05em; max-width: 800px; line-height: 1.6; }
+        .about-details { display: grid; grid-template-columns: 1fr 1fr; gap: 4vw; border-top: 1px solid #DDD; padding-top: 4vw; }
+        .detail-group { margin-bottom: 2.5vw; }
+        .detail-label { font-size: 13px; color: #888; margin-bottom: 8px; }
+        .detail-label .en { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; }
+        .detail-content { font-size: 15px; font-weight: 500; line-height: 1.8; color: #222; }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .logo-title { font-size: 15vw; }
+            .logo-title sup { font-size: 4vw; }
+            .preloader-brand { font-size: 15vw; }
+            .sub-nav-bar { flex-wrap: wrap; justify-content: center; border-radius: 12px; padding: 10px; }
+            .sub-nav-item { padding: 6px 12px; }
+            .grid-6-col { grid-template-columns: repeat(3, 1fr); gap: 2vw; }
+            .grid-5-col { grid-template-columns: repeat(2, 1fr); gap: 2vw; }
+            .grid-4-col { grid-template-columns: repeat(2, 1fr); gap: 3vw; }
+            .grid-3-col { grid-template-columns: repeat(2, 1fr); gap: 3vw; }
+            .grid-2-col { grid-template-columns: 1fr; }
+            .card-16-9:nth-child(even) { margin-top: 0; }
+            .about-text .cn { font-size: 5.5vw; }
+            .about-details { grid-template-columns: 1fr; }
+            .section-title-cn { font-size: 8vw; }
+            #archive .ai-text-block .cn { font-size: 4vw !important; }
+            #archive .ai-text-block { padding: 4vw 0 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="preloader">
+        <div class="preloader-brand">YICCD</div>
+        <div class="counter">0%</div>
+        <div class="black-hole-cover"></div>
+    </div>
+
+    <nav class="nav-wrapper">
+        <div class="nav-pill">
+            <a class="nav-item active" data-target="home"><span class="cn">首页</span><span class="en">Home</span></a>
+            <a class="nav-item" data-target="work"><span class="cn">作品</span><span class="en">Work</span></a>
+            <a class="nav-item" data-target="archive"><span class="cn">档案</span><span class="en">Archive</span></a>
+            <a class="nav-item" data-target="about"><span class="cn">关于</span><span class="en">About</span></a>
+        </div>
+    </nav>
+
+    <section id="home" class="view-container active">
+        <div class="overlay"></div>
+        <div class="floating-gallery" id="gallery"></div>
+        <main class="content">
+            <h1 class="logo-title">YICCD<sup>©</sup></h1>
+            <div class="subtitle-wrapper">
+                <span>Creative Space</span>
+                <div class="badge tagline-pill">
+                    <div class="pill-carousel">
+                        <div class="sliding-text">
+                            <span>Personal Portfolio</span>
+                            <span>个人作品集</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </section>
+
+    <section id="work" class="view-container">
+        <div class="section-header">
+            <div class="section-title-en">Selected Projects</div>
+            <div class="section-title-cn">近期作品</div>
+            <div class="section-desc">
+                <div class="cn">基于真实的画幅呈现逻辑进行双轴线划分，涵盖高精度工业级材质打磨与完整品牌视觉全链路推演。</div>
+                <div class="en">Categorized by dimensional focus: 9:16 CGI Simulation & 16:9 Full-link Brand Narrative.</div>
+            </div>
+        </div>
+
+        <nav class="sub-nav-container">
+            <div class="sub-nav-bar">
+                <a href="#cat-c4d" class="sub-nav-item active">C4D / CGI</a>
+                <a href="#cat-cover" class="sub-nav-item">封面 / Cover</a>
+                <a href="#cat-video" class="sub-nav-item">视频 / Video</a>
+                <a href="#cat-detail" class="sub-nav-item">详情 / Detail</a>
+                <a href="#cat-material" class="sub-nav-item">物料 / Material</a>
+            </div>
+        </nav>
+
+        <div id="cat-c4d" class="sub-section-title"><span>C4D渲染作品</span><span class="en-tag">/ 3D RENDERING & CGI</span></div>
+        <div class="grid-3-col">
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/1.png" alt="Project"><div class="project-info"><div class="cn">Youth Radiance (YR) 黑色包装重塑</div><div class="en">C4D / Octane Render / Black Cardboard</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/2.png" alt="Project"><div class="project-info"><div class="cn">高奢美妆玻璃布光推演</div><div class="en">Product CGI / SSS Material</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/3.png" alt="Project"><div class="project-info"><div class="cn">三维动态流体光影合成</div><div class="en">Dynamics / Lighting</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/4.png" alt="Project"><div class="project-info"><div class="cn">作品四中文标题</div><div class="en">Project 4 Details / Tech Stack</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/5.png" alt="Project"><div class="project-info"><div class="cn">作品五中文标题</div><div class="en">Project 5 Details / Tech Stack</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/6.png" alt="Project"><div class="project-info"><div class="cn">作品六中文标题</div><div class="en">Project 6 Details / Tech Stack</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/7.png" alt="Project"><div class="project-info"><div class="cn">作品七中文标题</div><div class="en">Project 7 Details / Tech Stack</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/8.png" alt="Project"><div class="project-info"><div class="cn">作品八中文标题</div><div class="en">Project 8 Details / Tech Stack</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/9.png" alt="Project"><div class="project-info"><div class="cn">作品九中文标题</div><div class="en">Project 9 Details / Tech Stack</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/c4d/10.png" alt="Project"><div class="project-info"><div class="cn">作品十中文标题</div><div class="en">Project 10 Details / Tech Stack</div></div></div>
+        </div>
+
+        <div id="cat-cover" class="sub-section-title"><span>封面</span><span class="en-tag">/ COVER DESIGN</span></div>
+        <div class="grid-2-col" style="margin-bottom: 2vw;">
+            <div class="project-card card-16-9"><img class="project-img" src="pt/fm/1.png" alt="Cover"><div class="project-info"><div class="cn">16:9 封面设计 01</div><div class="en">Editorial / Cover</div></div></div>
+            <div class="project-card card-16-9"><img class="project-img" src="pt/fm/2.png" alt="Cover"><div class="project-info"><div class="cn">16:9 封面设计 02</div><div class="en">Editorial / Cover</div></div></div>
+        </div>
+        <div class="grid-4-col" style="margin-bottom: 2vw;">
+            <div class="project-card card-ratio-cover-vert"><img class="project-img" src="pt/fm/7.png" alt="Cover"><div class="project-info"><div class="cn">1125x1500 纵向排版 01</div><div class="en">Vertical / Typography</div></div></div>
+            <div class="project-card card-ratio-cover-vert"><img class="project-img" src="pt/fm/8.png" alt="Cover"><div class="project-info"><div class="cn">1125x1500 纵向排版 02</div><div class="en">Vertical / Typography</div></div></div>
+            <div class="project-card card-ratio-cover-vert"><img class="project-img" src="pt/fm/9.png" alt="Cover"><div class="project-info"><div class="cn">1125x1500 纵向排版 03</div><div class="en">Vertical / Typography</div></div></div>
+            <div class="project-card card-ratio-cover-vert"><img class="project-img" src="pt/fm/10.png" alt="Cover"><div class="project-info"><div class="cn">1125x1500 纵向排版 04</div><div class="en">Vertical / Typography</div></div></div>
+        </div>
+        <div class="grid-2-col">
+            <div class="project-card card-16-9"><img class="project-img" src="pt/fm/5.png" alt="Cover"><div class="project-info"><div class="cn">16:9 封面设计 03</div><div class="en">Editorial / Cover</div></div></div>
+            <div class="project-card card-16-9"><img class="project-img" src="pt/fm/6.png" alt="Cover"><div class="project-info"><div class="cn">16:9 封面设计 04</div><div class="en">Editorial / Cover</div></div></div>
+            <div class="project-card card-16-9"><img class="project-img" src="pt/fm/3.png" alt="Cover"><div class="project-info"><div class="cn">16:9 封面设计 05</div><div class="en">Editorial / Cover</div></div></div>
+            <div class="project-card card-16-9"><img class="project-img" src="pt/fm/4.png" alt="Cover"><div class="project-info"><div class="cn">16:9 封面设计 06</div><div class="en">Editorial / Cover</div></div></div>
+        </div>
+
+        <div id="cat-video" class="sub-section-title"><span>视频剪辑</span><span class="en-tag">/ VIDEO EDITING</span></div>
+        <div class="group-label">LONG FORMAT / 16:9</div>
+        <div class="grid-2-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-16-9"><video class="project-img" src="pt/sp/2.mp4" controls></video><div class="project-info"><div class="cn">商业长视频项目 01</div><div class="en">Video Editing / Long Format</div></div></div>
+            <div class="project-card card-16-9"><video class="project-img" src="pt/sp/1.mp4" controls></video><div class="project-info"><div class="cn">商业长视频项目 02</div><div class="en">Video Editing / Long Format</div></div></div>
+        </div>
+        <div class="group-label">MOTION GRAPHICS / 16:9</div>
+        <div class="grid-3-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-16-9"><video class="project-img" src="pt/sp/3.mp4" autoplay loop muted playsinline></video><div class="project-info"><div class="cn">AE 动效视觉 01</div><div class="en">After Effects / Motion</div></div></div>
+            <div class="project-card card-16-9"><video class="project-img" src="pt/sp/4.mp4" autoplay loop muted playsinline></video><div class="project-info"><div class="cn">AE 动效视觉 02</div><div class="en">After Effects / Motion</div></div></div>
+            <div class="project-card card-16-9"><video class="project-img" src="pt/sp/5.mp4" autoplay loop muted playsinline></video><div class="project-info"><div class="cn">AE 动效视觉 03</div><div class="en">After Effects / Motion</div></div></div>
+        </div>
+        <div class="group-label">JEWELRY EDITING / 9:16</div>
+        <div class="grid-3-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-9-16"><video class="project-img" src="pt/sp/6.mp4" autoplay loop muted playsinline></video><div class="project-info"><div class="cn">高奢珠宝剪辑 01</div><div class="en">Jewelry / Vertical Edit</div></div></div>
+            <div class="project-card card-9-16"><video class="project-img" src="pt/sp/7.mp4" autoplay loop muted playsinline></video><div class="project-info"><div class="cn">高奢珠宝剪辑 02</div><div class="en">Jewelry / Vertical Edit</div></div></div>
+            <div class="project-card card-9-16"><video class="project-img" src="pt/sp/8.mp4" autoplay loop muted playsinline></video><div class="project-info"><div class="cn">高奢珠宝剪辑 03</div><div class="en">Jewelry / Vertical Edit</div></div></div>
+        </div>
+
+        <div id="cat-detail" class="sub-section-title"><span>详情页</span><span class="en-tag">/ E-COMMERCE DETAIL PAGE</span></div>
+        <div class="group-label">PROJECT 01 / 1240 x 3845</div>
+        <div class="grid-6-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-ratio-p1"><img class="project-img" src="pt/xqy/1/1.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 1</div></div></div>
+            <div class="project-card card-ratio-p1"><img class="project-img" src="pt/xqy/1/2.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 2</div></div></div>
+            <div class="project-card card-ratio-p1"><img class="project-img" src="pt/xqy/1/3.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 3</div></div></div>
+            <div class="project-card card-ratio-p1"><img class="project-img" src="pt/xqy/1/4.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 4</div></div></div>
+            <div class="project-card card-ratio-p1"><img class="project-img" src="pt/xqy/1/5.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 5</div></div></div>
+            <div class="project-card card-ratio-p1"><img class="project-img" src="pt/xqy/1/6.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 6</div></div></div>
+        </div>
+        <div class="group-label">PROJECT 02 / 1080 x 1091</div>
+        <div class="grid-4-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-ratio-p2"><img class="project-img" src="pt/xqy/2/1.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 1</div></div></div>
+            <div class="project-card card-ratio-p2"><img class="project-img" src="pt/xqy/2/2.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 2</div></div></div>
+        </div>
+        <div class="group-label">PROJECT 03 / 750 x 1430</div>
+        <div class="grid-5-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-ratio-p3"><img class="project-img" src="pt/xqy/3/1.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 1</div></div></div>
+            <div class="project-card card-ratio-p3"><img class="project-img" src="pt/xqy/3/2.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 2</div></div></div>
+            <div class="project-card card-ratio-p3"><img class="project-img" src="pt/xqy/3/3.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 3</div></div></div>
+            <div class="project-card card-ratio-p3"><img class="project-img" src="pt/xqy/3/4.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 4</div></div></div>
+            <div class="project-card card-ratio-p3"><img class="project-img" src="pt/xqy/3/5.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 5</div></div></div>
+        </div>
+        <div class="group-label">PROJECT 04 / 640 x 1195</div>
+        <div class="grid-6-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-ratio-p4"><img class="project-img" src="pt/xqy/4/1.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 1</div></div></div>
+            <div class="project-card card-ratio-p4"><img class="project-img" src="pt/xqy/4/2.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 2</div></div></div>
+            <div class="project-card card-ratio-p4"><img class="project-img" src="pt/xqy/4/3.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 3</div></div></div>
+            <div class="project-card card-ratio-p4"><img class="project-img" src="pt/xqy/4/4.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 4</div></div></div>
+            <div class="project-card card-ratio-p4"><img class="project-img" src="pt/xqy/4/5.jpg" alt="Detail"><div class="project-info"><div class="cn">详情切片 5</div></div></div>
+            <div class="project-card card-ratio-p4"><img class="project-img" src="pt/xqy/4/6.png" alt="Detail"><div class="project-info"><div class="cn">详情切片 6</div></div></div>
+        </div>
+
+        <div id="cat-material" class="sub-section-title"><span>展板, 易拉宝, 物料</span><span class="en-tag">/ OFFLINE VISUAL MATERIALS</span></div>
+        <div class="grid-1-col" style="margin-bottom: 3vw;">
+            <div class="project-card card-16-9"><img class="project-img" src="pt/zb/3.png" alt="16:9 展板"><div class="project-info"><div class="cn">线下展会横向视觉展板</div><div class="en">Exhibition Board / 16:9</div></div></div>
+        </div>
+        <div class="grid-2-col" style="margin-bottom: 3vw;">
+            <div class="project-card card-ratio-2-3"><img class="project-img" src="pt/zb/4.png" alt="725x1086 物料"><div class="project-info"><div class="cn">品牌宣传立式展架 01</div><div class="en">Poster Stand / 725x1086</div></div></div>
+            <div class="project-card card-ratio-2-3"><img class="project-img" src="pt/zb/5.png" alt="725x1086 物料"><div class="project-info"><div class="cn">品牌宣传立式展架 02</div><div class="en">Poster Stand / 725x1086</div></div></div>
+        </div>
+        <div class="grid-2-col" style="align-items: start;">
+            <div class="project-card card-ratio-tall"><img class="project-img" src="pt/zb/1.png"  alt="易拉宝"><div class="project-info"><div class="cn">活动主视觉巨幅易拉宝</div><div class="en">Roll-up Banner / 4724x10630</div></div></div>
+            <div class="project-card card-ratio-3-4" style="margin-top: 8vw;"><img class="project-img" src="pt/zb/2.png" alt="画册"><div class="project-info"><div class="cn">高奢线精装画册封面册</div><div class="en">Brand Brochure / 6622x8793</div></div></div>
+        </div>
+    </section>
+
+    <section id="archive" class="view-container">
+        <div class="section-header">
+            <div class="section-title-en">AI Exploration & Brand System</div>
+            <div class="section-title-cn">视觉档案与品牌体系</div>
+            <div class="section-desc">
+                <div class="cn">从前沿的 AI 辅助视觉探索，到完整的商业品牌全链路架构推演。</div>
+                <div class="en">From AI-assisted visual exploration to the complete brand architecture.</div>
+            </div>
+        </div>
+
+        <div class="sub-section-title"><span>AI 辅助与视觉推演</span><span class="en-tag">/ AI WORKFLOW & EXPLORATION</span></div>
+        
+        <div class="ai-text-block" style="margin-bottom: 8vw; padding: 3vw 0;">
+            <div class="cn" style="font-size: 2vw; max-width: 1000px; color: #EAEAEA; line-height: 1.8; font-weight: 500; letter-spacing: 0.02em;">
+                在日常的工作中，AI 已经深刻地渗透进我们的生活。我在工作中也会经常利用 AI 来突破灵感边界并大幅提高工作效率。像 <span style="color: #FFF; font-family: var(--font-mono);">Gemini</span>，以及 <span style="color: #FFF; font-family: var(--font-mono);">GPT 的 Image-2</span> 等前沿生成式模型，我在实际的视觉推演中都可以做到熟练使用。
+            </div>
+            <div class="en" style="margin-top: 1.5vw; font-family: var(--font-mono); font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.05em; max-width: 800px; line-height: 1.6;">
+                AI has deeply penetrated our daily lives and workflows. I frequently utilize AI tools to enhance my efficiency and push creative boundaries. I am highly proficient in applying advanced generative models like Gemini and GPT's Image-2 in practical design pipelines.
+            </div>
+        </div>
+
+        <div class="sub-section-title"><span>YR 青春与焕彩 - 全链路品牌构建</span><span class="en-tag">/ YOUTH RADIANCE (YR) BRAND SYSTEM</span></div>
+        <div class="about-text" style="margin-bottom: 4vw; padding: 0 1vw;">
+            <div class="cn" style="font-size: 1.3vw; max-width: 900px; color: #CCC; line-height: 1.8;">
+                YR青春与焕彩（Youth Radiance）是一个覆盖全流程的商业品牌视觉构建项目。在包装策略上，摒弃了市面上常规的低饱和度裸色方案，转而采用极具质感的<span>纯黑卡纸材质</span>，以深邃的高级黑基调完美反衬产品的物理光影与高奢属性。该体系系统性地输出了从基础 Logo、三维产品建模、实体刀版图，到商业视频广告及长图详情页的完整闭环。
+            </div>
+            <div class="en" style="margin-top: 1vw;">A full-process brand ecosystem. Deviating from standard low-saturation nude tones, YR utilizes premium black cardboard packaging to accentuate the product's high-end positioning.</div>
+        </div>
+
+        <div class="group-label">01. LOGO & PRODUCT / 品牌标识与产品</div>
+        <div class="grid-3-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-ratio-logo"><img class="project-img" src="pt/yr/logo.png" alt="LOGO"><div class="project-info"><div class="cn">YR 品牌 LOGO</div><div class="en">530 x 536</div></div></div>
+            <div class="project-card card-1-1"><img class="project-img" src="pt/yr/cydb.png" alt="Product 1"><div class="project-info"><div class="cn">产品展示 01</div><div class="en">750 x 750</div></div></div>
+            <div class="project-card card-1-1"><img class="project-img" src="pt/yr/fdycp.png" alt="Product 2"><div class="project-info"><div class="cn">产品展示 02</div><div class="en">750 x 750</div></div></div>
+        </div>
+
+        <div class="group-label">02. DIE-CUT & PACKAGING / 刀版图与包装展示</div>
+        <div class="grid-2-col" style="margin-bottom: 2vw; align-items: start;">
+            <div class="project-card card-ratio-diecut"><img class="project-img" src="pt/yr/dbt.png" alt="Die-cut 1"><div class="project-info"><div class="cn">包装刀版图规范 01</div><div class="en">2619 x 3073</div></div></div>
+            <div class="project-card card-ratio-diecut"><img class="project-img" src="pt/yr/dbt2.png" alt="Die-cut 2"><div class="project-info"><div class="cn">包装刀版图规范 02</div><div class="en">2619 x 3073</div></div></div>
+        </div>
+        <div class="grid-6-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-9-16"><img class="project-img" src="pt/yr/bz1.png" alt="Packaging 1"><div class="project-info"><div class="cn">纯黑包装视觉展示 01</div><div class="en">9:16 Vertical</div></div></div>
+            <div class="project-card card-9-16"><img class="project-img" src="pt/yr/bz2.png" alt="Packaging 2"><div class="project-info"><div class="cn">纯黑包装视觉展示 02</div><div class="en">9:16 Vertical</div></div></div>
+        </div>
+
+        <div class="group-label">03. COMMERCIAL VIDEO / 视频广告</div>
+        <div class="grid-1-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-16-9"><video class="project-img" src="pt/yr/YR.mp4" controls></video><div class="project-info"><div class="cn">YR 商业广告短片</div><div class="en">Commercial Video / 16:9</div></div></div>
+        </div>
+
+        <div class="group-label">04. E-COMMERCE DETAIL PAGE / 后期商业详情页</div>
+        <div style="font-size: 11px; color: #666; margin-bottom: 1vw; font-family: var(--font-mono); letter-spacing: 0.1em;">SET 01 / 790 x 1616</div>
+        <div class="grid-4-col" style="margin-bottom: 3vw;">
+            <div class="project-card card-ratio-yr-p1"><img class="project-img" src="pt/yr/1/1.jpg" alt="Detail 1-1"><div class="project-info"><div class="cn">详情切片 1.1</div></div></div>
+            <div class="project-card card-ratio-yr-p1"><img class="project-img" src="pt/yr/1/2.jpg" alt="Detail 1-2"><div class="project-info"><div class="cn">详情切片 1.2</div></div></div>
+            <div class="project-card card-ratio-yr-p1"><img class="project-img" src="pt/yr/1/3.jpg" alt="Detail 1-3"><div class="project-info"><div class="cn">详情切片 1.3</div></div></div>
+            <div class="project-card card-ratio-yr-p1"><img class="project-img" src="pt/yr/1/4.jpg" alt="Detail 1-4"><div class="project-info"><div class="cn">详情切片 1.4</div></div></div>
+        </div>
+        <div style="font-size: 11px; color: #666; margin-bottom: 1vw; font-family: var(--font-mono); letter-spacing: 0.1em;">SET 02 / 928 x 1547</div>
+        <div class="grid-3-col" style="margin-bottom: 4vw;">
+            <div class="project-card card-ratio-yr-p2"><img class="project-img" src="pt/yr/2/1.jpg" alt="Detail 2-1"><div class="project-info"><div class="cn">详情切片 2.1</div></div></div>
+            <div class="project-card card-ratio-yr-p2"><img class="project-img" src="pt/yr/2/2.jpg" alt="Detail 2-2"><div class="project-info"><div class="cn">详情切片 2.2</div></div></div>
+            <div class="project-card card-ratio-yr-p2"><img class="project-img" src="pt/yr/2/3.jpg" alt="Detail 2-3"><div class="project-info"><div class="cn">详情切片 2.3</div></div></div>
+        </div>
+    </section>
+
+    <section id="about" class="view-container">
+        <div class="about-layout">
+            <div class="about-text">
+                <div class="cn" style="font-size: 4vw; font-weight: 600; letter-spacing: -0.03em;">感谢您的观看。</div>
+                <div class="cn" style="font-size: 1.5vw; color: #666; margin-top: 1vw;">期待在未来的<span>数字媒体设计</span>实践中，继续探索视觉表达的纯粹边界。</div>
+                <div class="en" style="font-family: var(--font-mono); font-size: 11px; color: #999; margin-top: 1.5vw; text-transform: uppercase; letter-spacing: 0.05em;">Thank you for watching. Looking forward to exploring more possibilities in digital media design and visual architecture.</div>
+            </div>
+            
+            <div class="about-details">
+                <div>
+                    <div class="detail-group">
+                        <div class="detail-label"><span class="en">Core Expertise</span> / 核心能力矩阵</div>
+                        <div class="detail-content">
+                            核心设计软件 / 精通 PS, AI, C4D, Octane 等<br>
+                            国内 AI 工作流 / 深度应用 即梦 (Jimeng), 豆包 (Doubao) 等<br>
+                            前沿 AI 协同 / 熟练运用 Gemini, GPT, Codex 等海外模型
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="detail-group">
+                        <div class="detail-label"><span class="en">Connect</span> / 联络通道</div>
+                        <div class="detail-content">
+                            电话 (Tel) / 15626200991<br>
+                            邮箱 (Email) / 1250883290@qq.com<br>
+                            微信 (QQ) / 1250883290
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const softwareIcons = [
+                'https://upload.wikimedia.org/wikipedia/commons/a/af/Adobe_Photoshop_CC_icon.svg',      
+                'https://upload.wikimedia.org/wikipedia/commons/f/fb/Adobe_Illustrator_CC_icon.svg',    
+                'https://upload.wikimedia.org/wikipedia/commons/c/cb/Adobe_After_Effects_CC_icon.svg',  
+                'https://upload.wikimedia.org/wikipedia/commons/0/0c/Blender_logo_no_text.svg',         
+                'https://ui-avatars.com/api/?name=C4D&background=0A0A0A&color=fff&size=256&bold=true',  
+                'https://ui-avatars.com/api/?name=3Ds&background=0A0A0A&color=0eb8ce&size=256&bold=true', 
+                'https://ui-avatars.com/api/?name=MD&background=0A0A0A&color=ffeb3b&size=256&bold=true',  
+                'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/figma/figma-original.svg'    
+            ];
+            
+            const gallery = document.getElementById('gallery');
+            const cardsData = [];
+
+            function createCards() {
+                for (let i = 0; i < 12; i++) {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    const img = document.createElement('img');
+                    img.src = softwareIcons[i % softwareIcons.length];
+                    card.appendChild(img);
+                    gallery.appendChild(card);
+
+                    const size = 60 + Math.random() * 50; 
+                    card.style.width = `${size}px`;
+                    card.style.height = `${size}px`;
+
+                    const angle = (i / 12) * Math.PI * 2 + (Math.random() * 0.5 - 0.25);
+                    const radius = 300 + Math.random() * 350; 
+                    const baseZ = (Math.random() - 0.5) * 600;
+                    const baseRotate = (Math.random() - 0.5) * 60;
+
+                    const baseX = Math.cos(angle) * radius - size / 2;
+                    const baseY = Math.sin(angle) * radius - size / 2;
+
+                    cardsData.push({
+                        el: card, 
+                        angle: angle, 
+                        radius: radius, 
+                        size: size,
+                        baseZ: baseZ, 
+                        baseRotate: baseRotate,
+                        angularSpeed: 0.0015 + Math.random() * 0.001,
+                        floatPhase: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+            createCards();
+
+            const counterElement = document.querySelector(".counter");
+            const preloader = document.getElementById("preloader");
+            const blackHole = document.querySelector(".black-hole-cover");
+            let countObj = { val: 0 };
+            
+            gsap.to(countObj, {
+                val: 100, duration: 1.8, ease: "power2.out",
+                onUpdate: () => {
+                    counterElement.textContent = Math.floor(countObj.val) + "%";
+                },
+                onComplete: () => {
+                    gsap.to(blackHole, {
+                        width: "350vw", height: "350vw",
+                        duration: 1.2, ease: "power3.in",
+                        onComplete: () => {
+                            preloader.remove(); 
+                            gsap.fromTo(".logo-title", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 1.2, ease: "power4.out" });
+                            gsap.fromTo(".subtitle-wrapper", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 1.0, delay: 0.2, ease: "power3.out" });
+                            gsap.to(".card", { opacity: 1, duration: 2, stagger: 0.05, ease: "power2.out" });
+                        }
+                    });
+                    gsap.to([".preloader-brand", ".counter"], { opacity: 0, duration: 0.3 });
+                }
+            });
+
+            let mouseX = 0, mouseY = 0, targetMouseX = 0, targetMouseY = 0;
+            window.addEventListener('mousemove', (e) => {
+                targetMouseX = (e.clientX / window.innerWidth) * 2 - 1;
+                targetMouseY = (e.clientY / window.innerHeight) * 2 - 1;
+            });
+
+            function animateCards() {
+                mouseX += (targetMouseX - mouseX) * 0.05;
+                mouseY += (targetMouseY - mouseY) * 0.05;
+
+                cardsData.forEach(data => {
+                    data.angle += data.angularSpeed;
+                    
+                    data.floatPhase += 0.015;
+                    const floatY = Math.sin(data.floatPhase) * 25;
+
+                    const currentX = Math.cos(data.angle) * data.radius - data.size / 2;
+                    const currentY = Math.sin(data.angle) * data.radius - data.size / 2 + floatY;
+
+                    const parallaxX = mouseX * (data.baseZ * 0.15 + 50);
+                    const parallaxY = mouseY * (data.baseZ * 0.15 + 50);
+
+                    data.el.style.transform = `translate3d(${currentX + parallaxX}px, ${currentY + parallaxY}px, ${data.baseZ}px) rotate(${data.baseRotate}deg)`;
+                });
+                requestAnimationFrame(animateCards);
+            }
+            animateCards();
+
+            const words = document.querySelectorAll(".pill-word");
+            let currentIndex = 0;
+            if (words.length > 0) {
+                setInterval(() => {
+                    const currentWord = words[currentIndex];
+                    currentIndex = (currentIndex + 1) % words.length;
+                    const nextWord = words[currentIndex];
+
+                    gsap.to(currentWord, {
+                        opacity: 0, y: -28, duration: 0.5, ease: "power2.inOut",
+                        onComplete: () => {
+                            currentWord.classList.remove("active");
+                            gsap.set(currentWord, { y: 28, visibility: "hidden" }); 
+                        }
+                    });
+
+                    gsap.set(nextWord, { visibility: "visible" });
+                    nextWord.classList.add("active");
+                    gsap.to(nextWord, { opacity: 1, y: 0, duration: 0.5, delay: 0.05, ease: "power2.inOut" });
+                }, 3000); 
+            }
+
+            const navItems = document.querySelectorAll(".nav-pill .nav-item");
+            let isAnimating = false;
+
+            navItems.forEach(item => {
+                item.addEventListener("click", () => {
+                    if (isAnimating || item.classList.contains("active")) return;
+                    const targetViewId = item.getAttribute("data-target");
+                    const currentView = document.querySelector(".view-container.active");
+                    const targetView = document.getElementById(targetViewId);
+
+                    navItems.forEach(nav => nav.classList.remove("active"));
+                    item.classList.add("active");
+                    isAnimating = true;
+
+                    gsap.to(currentView, {
+                        opacity: 0, y: -30, duration: 0.45, ease: "power2.inOut",
+                        onComplete: () => { 
+                            currentView.classList.remove("active"); 
+                            gsap.set(currentView, { y: 0 }); 
+                        }
+                    });
+
+                    targetView.classList.add("active");
+                    gsap.fromTo(targetView, 
+                        { opacity: 0, y: 50 }, 
+                        { opacity: 1, y: 0, duration: 0.7, delay: 0.3, ease: "power3.out", onComplete: () => { isAnimating = false; } }
+                    );
+                    targetView.scrollTop = 0;
+                });
+            });
+
+            const subNavItems = document.querySelectorAll('.sub-nav-item');
+            const workView = document.getElementById('work');
+            const categorySections = [
+                document.getElementById('cat-c4d'),
+                document.getElementById('cat-cover'),
+                document.getElementById('cat-video'),
+                document.getElementById('cat-detail'),
+                document.getElementById('cat-material')
+            ];
+
+            subNavItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = item.getAttribute('href').substring(1);
+                    const targetEl = document.getElementById(targetId);
+                    const offset = 80; 
+                    
+                    workView.scrollTo({
+                        top: targetEl.offsetTop - offset,
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+            workView.addEventListener('scroll', () => {
+                let current = "cat-c4d"; 
+                categorySections.forEach(section => {
+                    if (section) {
+                        const sectionTop = section.offsetTop;
+                        if (workView.scrollTop >= sectionTop - 150) { 
+                            current = section.getAttribute('id');
+                        }
+                    }
+                });
+
+                subNavItems.forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('href').substring(1) === current) {
+                        item.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
